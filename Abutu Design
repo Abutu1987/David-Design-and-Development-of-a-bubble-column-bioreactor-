@@ -1,0 +1,122 @@
+# Fermentation Simulation with Sparger Design and Dynamic Control
+import numpy as np
+import matplotlib.pyplot as plt
+
+# === Parameters ===
+# Biological Kinetics
+Y_O2_X = 1.1      # g O2 / g cells
+Y_X_S = 0.5       # g cells / g glucose
+r_S = 2           # g glucose / L.h
+k_La = 50         # 1/h
+epsilon_g = 0.15  # Gas holdup fraction
+P_O2 = 0.21       # atm
+H = 769.2         # Henry's constant (atm.L/mol)
+C_O2 = 0.005      # g/L
+C_O2_min = 0.002  # g/L
+Y_P_S = 0.05      # g ethanol / g glucose
+Y_CO2_S = 1.0     # g CO2 / g glucose
+
+# pH Control
+pH_0 = 5.5
+pH_min = 5.0
+k_CO2 = 0.05  # pH drop factor
+
+# Temperature Control
+Y_Q_X = 15   # kJ/g biomass
+Cp = 4.18    # kJ/kg.K
+m = 0.5      # kg
+T_0 = 30     # °C
+T_max = 35   # °C
+
+# Sparger Design
+Q_g = 2.2 / 3600  # m3/s from L/h
+P_drop = 13900    # Pa
+rho_g = 1.225     # kg/m3
+Cd = 0.6          # discharge coefficient
+N = 6             # orifices
+g = 9.81          # m/s2
+sigma = 0.072     # N/m
+rho_l = 1000      # kg/m3
+mu = 0.001        # Pa.s
+
+# Initial oxygen flow rate
+F_O2 = 0.001785 / 60000  # m3/s
+V = (F_O2 * Y_O2_X * Y_X_S * r_S) / (k_La * (1 - epsilon_g) * (P_O2 / H - C_O2))
+
+# Time Settings
+time = np.arange(49)
+S0, X0 = 50, 0.1  # g/L
+mu = 0.3
+
+# === Preallocate Arrays ===
+S_t = np.zeros_like(time, dtype=float)
+X_t = np.zeros_like(time, dtype=float)
+OTR_t = np.zeros_like(time, dtype=float)
+OUR_t = np.zeros_like(time, dtype=float)
+F_O2_t = np.zeros_like(time, dtype=float)
+pH_t = np.zeros_like(time, dtype=float)
+CO2_t = np.zeros_like(time, dtype=float)
+Temp_t = np.zeros_like(time, dtype=float)
+NaOH_added = np.zeros_like(time, dtype=float)
+Yield_eff = np.zeros_like(time, dtype=float)
+
+# Initial Conditions
+S_t[0], X_t[0], pH_t[0], Temp_t[0], F_O2_t[0] = S0, X0, pH_0, T_0, F_O2
+
+# === Simulation Loop ===
+for t in range(1, len(time)):
+    X_t[t] = X_t[t-1] * np.exp(mu)
+    S_t[t] = S_t[t-1] * np.exp(-r_S)
+    CO2_t[t] = Y_CO2_S * (S0 - S_t[t])
+    OUR_t[t] = Y_O2_X * X_t[t]
+    OTR_t[t] = k_La * (P_O2 / H - C_O2)
+    F_O2_t[t] = F_O2_t[t-1] * (1.1 if OUR_t[t] > OTR_t[t] else 1.2 if C_O2 < C_O2_min else 1)
+    F_O2_t[t] = min(F_O2_t[t], 0.01)
+    pH_t[t] = pH_0 - k_CO2 * CO2_t[t]
+    if pH_t[t] < pH_min:
+        NaOH_added[t] = (pH_min - pH_t[t]) * 2
+        pH_t[t] = pH_min
+    Temp_t[t] = T_0 + (Y_Q_X * X_t[t]) / (Cp * m)
+    if Temp_t[t] > T_max:
+        Temp_t[t] = T_max
+    Yield_eff[t] = X_t[t] / (S0 - S_t[t])
+
+t_opt = np.argmax(X_t)
+
+# === Sparger Design ===
+desired_velocity = np.sqrt(2 * P_drop / rho_g)
+d_o = np.sqrt((4 * Q_g) / (np.pi * N * desired_velocity))
+d_b = 1.38 * ((sigma / (rho_l * g))**(1/3))
+v_b = (2/9) * ((rho_l - rho_g) * g * d_b**2) / mu
+
+# === Print Key Results ===
+print(f"\n--- Key Results ---")
+print(f"Reactor Volume: {V * 1000:.2f} mL")
+print(f"Optimal Fermentation Time: {t_opt} h")
+print(f"Final Biomass: {X_t[-1]:.2f} g/L")
+print(f"Final Oxygen Flow Rate: {F_O2_t[-1] * 60000:.4f} L/min")
+print(f"Total NaOH Added: {np.sum(NaOH_added):.2f} g/L")
+print(f"Sparger Orifice Diameter: {d_o*1000:.3f} mm")
+print(f"Bubble Diameter: {d_b*1000:.2f} mm")
+print(f"Bubble Rise Velocity: {v_b:.3f} m/s")
+
+# === Plot Results ===
+fig, axs = plt.subplots(5, 2, figsize=(16, 20))
+axs[0, 0].plot(time, S_t, label='Glucose'); axs[0, 0].set_title('Glucose Depletion')
+axs[0, 1].plot(time, X_t, label='Biomass', color='r'); axs[0, 1].set_title('Biomass Growth')
+axs[1, 0].plot(time, Y_P_S * (S0 - S_t), label='Ethanol', color='g'); axs[1, 0].plot(time, CO2_t, label='CO2', color='k'); axs[1, 0].set_title('Ethanol & CO2 Production')
+axs[1, 1].plot(time, OUR_t, color='m'); axs[1, 1].set_title('Oxygen Uptake Rate (OUR)')
+axs[2, 0].plot(time, Yield_eff, color='c'); axs[2, 0].set_title('Substrate Yield Efficiency')
+axs[2, 1].plot(time, OTR_t, color='orange'); axs[2, 1].set_title('Oxygen Transfer Rate (OTR)')
+axs[3, 0].plot(time, F_O2_t * 60000, color='k'); axs[3, 0].set_title('Dynamic Oxygen Flow Rate')
+axs[3, 1].plot(time, X_t, color='r'); axs[3, 1].plot(t_opt, X_t[t_opt], 'go'); axs[3, 1].set_title('Peak Biomass Time')
+axs[4, 0].plot(time, pH_t, color='g'); axs[4, 0].plot(time, NaOH_added, '--', label='NaOH'); axs[4, 0].set_title('pH & NaOH Addition')
+axs[4, 1].plot(time, Temp_t, color='brown'); axs[4, 1].set_title('Temperature Control')
+
+# Label all
+for ax in axs.flat:
+    ax.set_xlabel('Time (h)')
+    ax.grid(); ax.legend(loc='best')
+
+plt.tight_layout()
+plt.show()
