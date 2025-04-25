@@ -1,0 +1,128 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNwfmuUOSlcn/S3AlTb+mcy",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Abutu1987/David-Design-and-Development-of-a-bubble-column-bioreactor-/blob/main/bubble%20column%20design%20parameters\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "8yH1ZJOFgLAS",
+        "outputId": "e072f705-9182-4186-f009-a0d4346f7c25"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Table 1: Summary of Calculated Parameters\n",
+            "Reactor Volume (V): 500.0 mL\n",
+            "Oxygen Transfer Coefficient (kLa): 50 h⁻¹\n",
+            "Oxygen Uptake Rate (OUR): 1.1 g O₂/g cells\n",
+            "Biomass Yield (YX/S): 0.5 g cells/g glucose\n",
+            "Glucose Consumption Rate (rS): 2 g/L·h\n",
+            "Gas Flow Rate (Qg): 2.20 L/h\n",
+            "Gas Holdup Fraction (ɛ): 0.15\n",
+            "Orifice Diameter (do): 1.2 mm\n",
+            "Number of Orifices (N): 6\n",
+            "Bubble Diameter (db): 2.68 mm\n",
+            "Gas Velocity Through Orifice (vo): 90.3 m/s\n",
+            "Pressure Drop Across Sparger (ΔP): 14.0 kPa\n",
+            "\n",
+            "Table 2: Parameters for the Sparger used in the BCB\n",
+            "Gas Flow Rate (Qg): 2.20 L/h\n",
+            "Orifice Diameter (do): 1.2 mm\n",
+            "Number of Orifices (N): 6\n",
+            "Gas Velocity Through Orifice (vo): 90.3 m/s\n",
+            "Pressure Drop (ΔP): 14.0 kPa\n",
+            "Bubble Diameter (db): 2.68 mm\n",
+            "Bubble Rise Velocity (vb): 15.64 m/s\n"
+          ]
+        }
+      ],
+      "source": [
+        "import numpy as np\n",
+        "\n",
+        "# === Input Parameters from Table 1 ===\n",
+        "V = 0.5  # L (500 mL)\n",
+        "kLa = 50  # 1/h\n",
+        "OUR = 1.1  # g O2/g cells\n",
+        "YX_S = 0.5  # g cells/g glucose\n",
+        "rS = 2  # g/L/h\n",
+        "Qg = 2.2 / 3600  # L/h to L/s\n",
+        "epsilon_g = 0.15\n",
+        "\n",
+        "do = 1.2e-3  # m\n",
+        "N = 6  # number of orifices\n",
+        "db = 2.68e-3  # m\n",
+        "vo = 90.3  # m/s\n",
+        "dP_kPa = 14  # kPa\n",
+        "\n",
+        "# === Derived/Additional Parameters ===\n",
+        "# Gas density and fluid properties (assumed values)\n",
+        "rho_g = 1.2  # kg/m3, density of air\n",
+        "g = 9.81  # m/s2\n",
+        "mu = 0.001  # Pa.s\n",
+        "rho_l = 1000  # kg/m3\n",
+        "sigma = 0.072  # N/m (surface tension)\n",
+        "\n",
+        "# === Sparger Calculations ===\n",
+        "# Pressure Drop (Pa)\n",
+        "dP = dP_kPa * 1000\n",
+        "\n",
+        "# Bubble Rise Velocity (Stokes' Law)\n",
+        "vb = (2/9) * ((rho_l - rho_g) * g * db**2) / mu\n",
+        "\n",
+        "# === Display Results ===\n",
+        "print(\"Table 1: Summary of Calculated Parameters\")\n",
+        "print(f\"Reactor Volume (V): {V * 1000} mL\")\n",
+        "print(f\"Oxygen Transfer Coefficient (kLa): {kLa} h⁻¹\")\n",
+        "print(f\"Oxygen Uptake Rate (OUR): {OUR} g O₂/g cells\")\n",
+        "print(f\"Biomass Yield (YX/S): {YX_S} g cells/g glucose\")\n",
+        "print(f\"Glucose Consumption Rate (rS): {rS} g/L·h\")\n",
+        "print(f\"Gas Flow Rate (Qg): {Qg * 3600:.2f} L/h\")\n",
+        "print(f\"Gas Holdup Fraction (ɛ): {epsilon_g}\")\n",
+        "print(f\"Orifice Diameter (do): {do * 1000:.1f} mm\")\n",
+        "print(f\"Number of Orifices (N): {N}\")\n",
+        "print(f\"Bubble Diameter (db): {db * 1000:.2f} mm\")\n",
+        "print(f\"Gas Velocity Through Orifice (vo): {vo:.1f} m/s\")\n",
+        "print(f\"Pressure Drop Across Sparger (ΔP): {dP / 1000:.1f} kPa\")\n",
+        "\n",
+        "print(\"\\nTable 2: Parameters for the Sparger used in the BCB\")\n",
+        "print(f\"Gas Flow Rate (Qg): {Qg * 3600:.2f} L/h\")\n",
+        "print(f\"Orifice Diameter (do): {do * 1000:.1f} mm\")\n",
+        "print(f\"Number of Orifices (N): {N}\")\n",
+        "print(f\"Gas Velocity Through Orifice (vo): {vo:.1f} m/s\")\n",
+        "print(f\"Pressure Drop (ΔP): {dP / 1000:.1f} kPa\")\n",
+        "print(f\"Bubble Diameter (db): {db * 1000:.2f} mm\")\n",
+        "print(f\"Bubble Rise Velocity (vb): {vb:.2f} m/s\")\n"
+      ]
+    }
+  ]
+}
